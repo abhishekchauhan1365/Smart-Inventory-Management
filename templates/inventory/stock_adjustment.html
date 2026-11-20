@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Stock Adjustment & Inventory Audit{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="pharmacy-card">
+            <div class="card-header">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-sliders text-primary me-2"></i>Inventory Audit & Stock Adjustment</h5>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted small mb-4">
+                    Use this form during routine physical stock reconciliations to correct discrepancies, record shrinkage, or log damaged containers. All changes are permanently recorded in the audit trail.
+                </p>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Target Batch <span class="text-danger">*</span></label>
+                        {{ form.batch }}
+                        {% if form.batch.errors %}<div class="text-danger small">{{ form.batch.errors.0 }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Adjustment Direction <span class="text-danger">*</span></label>
+                        {{ form.action }}
+                        {% if form.action.errors %}<div class="text-danger small">{{ form.action.errors.0 }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Number of Units <span class="text-danger">*</span></label>
+                        {{ form.quantity }}
+                        {% if form.quantity.errors %}<div class="text-danger small">{{ form.quantity.errors.0 }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Audit Reason / Justification <span class="text-danger">*</span></label>
+                        {{ form.reason }}
+                        <div class="form-text small">e.g. Broken vial during shelf stocking / Monthly count variance</div>
+                        {% if form.reason.errors %}<div class="text-danger small">{{ form.reason.errors.0 }}</div>{% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between border-top pt-3">
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> Record Stock Adjustment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

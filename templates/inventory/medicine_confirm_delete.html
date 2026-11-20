@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirm Delete Medicine{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="pharmacy-card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-trash-fill me-2"></i>Delete Medicine Confirmation</h5>
+            </div>
+            <div class="card-body p-4 text-center">
+                <i class="bi bi-exclamation-triangle text-danger display-4 mb-3 d-block"></i>
+                <h5 class="fw-bold mb-2">Delete {{ medicine.name }}?</h5>
+                <p class="text-secondary">
+                    SKU: <strong>{{ medicine.medicine_id }}</strong><br>
+                    Generic: <strong>{{ medicine.generic_name }}</strong><br>
+                    Category: <strong>{{ medicine.category.name }}</strong>
+                </p>
+
+                {% if has_active_batches %}
+                <div class="alert alert-warning text-start small mb-3">
+                    <i class="bi bi-exclamation-circle-fill me-1"></i>
+                    <strong>Cannot Delete Medicine:</strong> Active stock batches still exist with available units. You must dispense or dispose of all batches before deleting this medicine entry.
+                </div>
+                <a href="{% url 'medicine_detail' pk=medicine.pk %}" class="btn btn-primary">
+                    <i class="bi bi-arrow-left me-1"></i> Return to Medicine Details
+                </a>
+                {% else %}
+                <form method="POST" class="mt-4 d-flex justify-content-center gap-2">
+                    {% csrf_token %}
+                    <a href="{% url 'medicine_detail' pk=medicine.pk %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg me-1"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i> Delete Permanently
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

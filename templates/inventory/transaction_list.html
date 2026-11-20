@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Stock Transactions & Movement History{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h4 class="fw-bold mb-1 text-dark">Stock Movement & Transaction Logs</h4>
+        <p class="text-muted small mb-0">Immutable chronological history of all receipts, sales, audit adjustments, and disposals.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'report_stock_movement' %}?export=csv" class="btn btn-outline-success">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Movement Log (CSV)
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="pharmacy-card p-3 mb-4">
+    <form method="GET" class="row g-2 align-items-center">
+        <div class="col-md-7">
+            <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search by medicine name, batch number, or notes...">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select name="type" class="form-select">
+                <option value="">All Movement Types</option>
+                {% for code, label in types %}
+                <option value="{{ code }}" {% if type_filter == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-primary w-100">Filter</button>
+            {% if query or type_filter %}
+            <a href="{% url 'transaction_list' %}" class="btn btn-outline-secondary" title="Reset"><i class="bi bi-x-lg"></i></a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Transactions Table -->
+<div class="pharmacy-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Activity Type</th>
+                    <th>Medicine</th>
+                    <th>Batch #</th>
+                    <th>Units Moved</th>
+                    <th>Unit Price</th>
+                    <th>Authorized Staff</th>
+                    <th>Reference / Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in page_obj %}
+                <tr>
+                    <td class="small text-muted">{{ t.timestamp|date:"M d, Y H:i:s" }}</td>
+                    <td>
+                        {% if t.transaction_type == 'PURCHASE' %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                            <i class="bi bi-box-arrow-in-down me-1"></i> Stock In
+                        </span>
+                        {% elif t.transaction_type == 'DISPENSE' %}
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                            <i class="bi bi-bag-check me-1"></i> Dispensed
+                        </span>
+                        {% elif t.transaction_type == 'DISPOSAL_EXPIRED' %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                            <i class="bi bi-trash me-1"></i> Expired Disposal
+                        </span>
+                        {% elif t.transaction_type == 'ADJUSTMENT' %}
+                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                            <i class="bi bi-sliders me-1"></i> Audit Adjustment
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ t.get_transaction_type_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'medicine_detail' pk=t.medicine.pk %}" class="fw-semibold text-dark text-decoration-none">
+                            {{ t.medicine.name }}
+                        </a>
+                        <div class="text-muted small">{{ t.medicine.medicine_id }}</div>
+                    </td>
+                    <td>
+                        {% if t.batch %}
+                        <a href="{% url 'batch_detail' pk=t.batch.pk %}" class="text-decoration-none">
+                            <code>{{ t.batch.batch_number }}</code>
+                        </a>
+                        {% else %}
+                        <span class="text-muted small">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="fw-bold fs-6">{{ t.quantity }}</span> units
+                    </td>
+                    <td class="small">{% if t.unit_price %}${{ t.unit_price }}{% else %}-{% endif %}</td>
+                    <td class="small">
+                        <i class="bi bi-person me-1 text-muted"></i>{{ t.performed_by.username|default:"System" }}
+                    </td>
+                    <td class="small text-secondary">{{ t.reference_note|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">No stock movements found matching filter.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center">
+        <span class="text-muted small">Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ total_count }} transactions</span>
+        <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&type={{ type_filter }}&q={{ query }}">&laquo;</a></li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}&type={{ type_filter }}&q={{ query }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&type={{ type_filter }}&q={{ query }}">&raquo;</a></li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

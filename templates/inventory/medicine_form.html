@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <div class="pharmacy-card">
+            <div class="card-header">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-capsule text-primary me-2"></i>{{ title }}</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Medicine ID / SKU <span class="text-danger">*</span></label>
+                            {{ form.medicine_id }}
+                            <div class="form-text small">e.g. MED-1001 (Unique Code)</div>
+                            {% if form.medicine_id.errors %}<div class="text-danger small">{{ form.medicine_id.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Commercial Brand Name <span class="text-danger">*</span></label>
+                            {{ form.name }}
+                            {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Generic Name / Composition <span class="text-danger">*</span></label>
+                            {{ form.generic_name }}
+                            {% if form.generic_name.errors %}<div class="text-danger small">{{ form.generic_name.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Category <span class="text-danger">*</span></label>
+                            {{ form.category }}
+                            {% if form.category.errors %}<div class="text-danger small">{{ form.category.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Manufacturer <span class="text-danger">*</span></label>
+                            {{ form.manufacturer }}
+                            {% if form.manufacturer.errors %}<div class="text-danger small">{{ form.manufacturer.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Dosage Form</label>
+                            {{ form.dosage_form }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Strength</label>
+                            {{ form.strength }}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Unit Selling Price ($) <span class="text-danger">*</span></label>
+                            {{ form.unit_price }}
+                            {% if form.unit_price.errors %}<div class="text-danger small">{{ form.unit_price.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Minimum Stock Alert Threshold <span class="text-danger">*</span></label>
+                            {{ form.minimum_stock_threshold }}
+                            <div class="form-text small">Alerts when usable stock &le; this value</div>
+                            {% if form.minimum_stock_threshold.errors %}<div class="text-danger small">{{ form.minimum_stock_threshold.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Preferred Supplier</label>
+                            {{ form.supplier }}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Storage Conditions</label>
+                            {{ form.storage_conditions }}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Clinical Description / Notes</label>
+                            {{ form.description }}
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label fw-semibold">Active in Catalog (Available for stock receipt & dispensing)</label>
+                            </div>
+                        </div>
+
+                        <div class="col-12 border-top pt-3 d-flex justify-content-between">
+                            <a href="{% url 'medicine_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Save Medicine Record
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

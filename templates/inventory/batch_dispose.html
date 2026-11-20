@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}Dispose Expired Batch: {{ batch.batch_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="pharmacy-card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-trash-fill me-2"></i>Record Disposal of Expired Medicine Stock</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="alert alert-danger d-flex align-items-center gap-2 mb-4">
+                    <i class="bi bi-exclamation-octagon-fill fs-3"></i>
+                    <div>
+                        <strong>Biohazard / Medication Disposal:</strong>
+                        This batch is expired and must be safely quarantined and disposed of according to standard clinical waste procedures.
+                    </div>
+                </div>
+
+                <div class="bg-light p-3 rounded mb-4">
+                    <div class="row g-2 small">
+                        <div class="col-sm-6"><strong>Medicine:</strong> {{ batch.medicine.name }}</div>
+                        <div class="col-sm-6"><strong>Batch #:</strong> {{ batch.batch_number }}</div>
+                        <div class="col-sm-6"><strong>Expiry Date:</strong> {{ batch.expiry_date|date:"F d, Y" }} ({{ batch.days_to_expiry|stringformat:"d"|slice:"1:" }} days ago)</div>
+                        <div class="col-sm-6"><strong>Current Expired Units:</strong> <span class="text-danger fw-bold">{{ batch.available_quantity }}</span></div>
+                        <div class="col-sm-6"><strong>Supplier:</strong> {{ batch.supplier.company_name }}</div>
+                        <div class="col-sm-6"><strong>Purchase Cost:</strong> ${{ batch.purchase_price }} / unit</div>
+                    </div>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    {% for hidden in form.hidden_fields %}
+                        {{ hidden }}
+                    {% endfor %}
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger py-2 small mb-3">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label class="form-label">Units to Dispose <span class="text-danger">*</span></label>
+                        {{ form.quantity }}
+                        <div class="form-text small">Maximum available: {{ batch.available_quantity }} units</div>
+                        {% if form.quantity.errors %}<div class="text-danger small">{{ form.quantity.errors.0 }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Disposal Protocol & Reason <span class="text-danger">*</span></label>
+                        {{ form.disposal_method }}
+                        <div class="form-text small">e.g. Incineration via clinical waste contractor / Returned to manufacturer agent for destruction</div>
+                        {% if form.disposal_method.errors %}<div class="text-danger small">{{ form.disposal_method.errors.0 }}</div>{% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between border-top pt-3">
+                        <a href="{% url 'batch_detail' pk=batch.pk %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash-fill me-1"></i> Execute Stock Disposal
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

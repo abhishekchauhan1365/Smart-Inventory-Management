@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirm Delete Category{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="pharmacy-card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-trash-fill me-2"></i>Delete Category Confirmation</h5>
+            </div>
+            <div class="card-body p-4 text-center">
+                <i class="bi bi-tag text-danger display-4 mb-3 d-block"></i>
+                <h5 class="fw-bold mb-2">Delete Category: {{ category.name }}?</h5>
+                <p class="text-secondary">Code: <code>{{ category.code }}</code></p>
+
+                {% if has_medicines %}
+                <div class="alert alert-warning text-start small mb-3">
+                    <i class="bi bi-exclamation-circle-fill me-1"></i>
+                    <strong>Cannot Delete:</strong> Medicines are currently assigned to this category. You must reassign or remove them before deleting this category.
+                </div>
+                <a href="{% url 'category_list' %}" class="btn btn-outline-secondary">Return to Categories</a>
+                {% else %}
+                <form method="POST" class="mt-4 d-flex justify-content-center gap-2">
+                    {% csrf_token %}
+                    <a href="{% url 'category_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg me-1"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i> Confirm Delete
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

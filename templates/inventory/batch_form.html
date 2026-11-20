@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="pharmacy-card">
+            <div class="card-header">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-boxes text-primary me-2"></i>{{ title }}</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        {% if form.medicine %}
+                        <div class="col-12">
+                            <label class="form-label">Medicine <span class="text-danger">*</span></label>
+                            {{ form.medicine }}
+                            {% if form.medicine.errors %}<div class="text-danger small">{{ form.medicine.errors.0 }}</div>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        <div class="col-md-6">
+                            <label class="form-label">Manufacturer Batch / Lot Number <span class="text-danger">*</span></label>
+                            {{ form.batch_number }}
+                            {% if form.batch_number.errors %}<div class="text-danger small">{{ form.batch_number.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Delivering Supplier <span class="text-danger">*</span></label>
+                            {{ form.supplier }}
+                            {% if form.supplier.errors %}<div class="text-danger small">{{ form.supplier.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Manufacturing Date <span class="text-danger">*</span></label>
+                            {{ form.manufacturing_date }}
+                            {% if form.manufacturing_date.errors %}<div class="text-danger small">{{ form.manufacturing_date.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
+                            {{ form.expiry_date }}
+                            {% if form.expiry_date.errors %}<div class="text-danger small">{{ form.expiry_date.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        {% if form.purchase_quantity %}
+                        <div class="col-md-6">
+                            <label class="form-label">Purchase Quantity Received <span class="text-danger">*</span></label>
+                            {{ form.purchase_quantity }}
+                            <div class="form-text small">Initial units checked into pharmacy storage</div>
+                            {% if form.purchase_quantity.errors %}<div class="text-danger small">{{ form.purchase_quantity.errors.0 }}</div>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if form.available_quantity %}
+                        <div class="col-md-6">
+                            <label class="form-label">Available Quantity <span class="text-danger">*</span></label>
+                            {{ form.available_quantity }}
+                            {% if form.available_quantity.errors %}<div class="text-danger small">{{ form.available_quantity.errors.0 }}</div>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        <div class="col-md-6">
+                            <label class="form-label">Unit Purchase Cost Price ($) <span class="text-danger">*</span></label>
+                            {{ form.purchase_price }}
+                            {% if form.purchase_price.errors %}<div class="text-danger small">{{ form.purchase_price.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        {% if form.entry_date %}
+                        <div class="col-md-6">
+                            <label class="form-label">Stock Entry Date</label>
+                            {{ form.entry_date }}
+                        </div>
+                        {% endif %}
+
+                        <div class="col-12">
+                            <label class="form-label">Storage Bin / Invoice Reference / Notes</label>
+                            {{ form.notes }}
+                        </div>
+
+                        <div class="col-12 border-top pt-3 d-flex justify-content-between">
+                            <a href="{% url 'batch_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Save Stock Batch
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

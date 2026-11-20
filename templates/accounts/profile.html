@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="pharmacy-card text-center p-4">
+            <div class="rounded-circle bg-primary bg-opacity-10 text-primary mx-auto d-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                <i class="bi bi-person-fill fs-1"></i>
+            </div>
+            <h5 class="fw-bold mb-1">{{ user_obj.get_full_name|default:user_obj.username }}</h5>
+            <p class="text-muted small mb-2">@{{ user_obj.username }}</p>
+            <span class="badge {% if user_obj.role == 'ADMIN' %}bg-primary{% else %}bg-info text-dark{% endif %} px-3 py-2 text-uppercase mb-3">
+                {{ user_obj.get_role_display }}
+            </span>
+            <div class="border-top pt-3 text-start small">
+                <div class="mb-2"><strong class="text-secondary">Email:</strong> {{ user_obj.email|default:"Not set" }}</div>
+                <div class="mb-2"><strong class="text-secondary">Phone:</strong> {{ user_obj.phone_number|default:"Not set" }}</div>
+                <div class="mb-2"><strong class="text-secondary">Qualification:</strong> {{ user_obj.qualification|default:"Registered Pharmacist" }}</div>
+                <div><strong class="text-secondary">Account Created:</strong> {{ user_obj.date_joined|date:"M d, Y" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <!-- Edit Profile Form -->
+        <div class="pharmacy-card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-person-gear me-2 text-primary"></i>Update Profile Information</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">First Name</label>
+                            {{ profile_form.first_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Last Name</label>
+                            {{ profile_form.last_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email Address</label>
+                            {{ profile_form.email }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phone Number</label>
+                            {{ profile_form.phone_number }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Professional Qualification / Role Notes</label>
+                            {{ profile_form.qualification }}
+                        </div>
+                        <div class="col-12 text-end">
+                            <button type="submit" name="update_profile" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Change Password Form -->
+        <div class="pharmacy-card">
+            <div class="card-header">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-key me-2 text-warning"></i>Change Password</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        {% for field in pwd_form %}
+                        <div class="col-12">
+                            <label class="form-label">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                            <div class="text-danger small mt-1">{{ field.errors.0 }}</div>
+                            {% endif %}
+                            {% if field.help_text %}
+                            <div class="text-muted small mt-1">{{ field.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        <div class="col-12 text-end">
+                            <button type="submit" name="change_password" class="btn btn-warning text-dark fw-semibold">
+                                <i class="bi bi-shield-lock me-1"></i> Update Password
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+
+{% block title %}Batches & Inventory Tracking{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h4 class="fw-bold mb-1 text-dark">Medicine Batches & Expiry Tracking</h4>
+        <p class="text-muted small mb-0">Monitor independent batch life cycles, expiry countdowns, and stock entries.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'batch_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Stock In / Add New Batch
+        </a>
+        <a href="{% url 'stock_adjustment' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-sliders me-1"></i> Stock Adjustment
+        </a>
+    </div>
+</div>
+
+<!-- Expiry Filter Pills Nav -->
+<ul class="nav nav-pills mb-3 gap-2">
+    <li class="nav-item">
+        <a class="nav-link {% if status_filter == 'all' %}active{% else %}bg-white border text-dark{% endif %}" href="?status=all&q={{ query }}&supplier={{ selected_supplier }}">
+            All Batches
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if status_filter == 'expired' %}active bg-danger text-white{% else %}bg-white border text-danger{% endif %}" href="?status=expired&q={{ query }}&supplier={{ selected_supplier }}">
+            <i class="bi bi-x-octagon-fill me-1"></i> Expired
+            {% if global_expired_count > 0 %}<span class="badge bg-danger ms-1">{{ global_expired_count }}</span>{% endif %}
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if status_filter == 'critical_7' %}active bg-danger text-white{% else %}bg-white border text-danger{% endif %}" href="?status=critical_7&q={{ query }}&supplier={{ selected_supplier }}">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i> &le; 7 Days
+            {% if global_critical_7_count > 0 %}<span class="badge bg-danger ms-1">{{ global_critical_7_count }}</span>{% endif %}
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if status_filter == 'urgent_15' %}active bg-warning text-dark{% else %}bg-white border text-warning text-dark{% endif %}" href="?status=urgent_15&q={{ query }}&supplier={{ selected_supplier }}">
+            <i class="bi bi-exclamation-circle-fill me-1"></i> 8-15 Days
+            {% if global_urgent_15_count > 0 %}<span class="badge bg-warning text-dark ms-1">{{ global_urgent_15_count }}</span>{% endif %}
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if status_filter == 'warning_30' %}active bg-info text-dark{% else %}bg-white border text-info text-dark{% endif %}" href="?status=warning_30&q={{ query }}&supplier={{ selected_supplier }}">
+            <i class="bi bi-info-circle-fill me-1"></i> 16-30 Days
+            {% if global_warning_30_count > 0 %}<span class="badge bg-info text-dark ms-1">{{ global_warning_30_count }}</span>{% endif %}
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if status_filter == 'safe' %}active bg-success text-white{% else %}bg-white border text-success{% endif %}" href="?status=safe&q={{ query }}&supplier={{ selected_supplier }}">
+            <i class="bi bi-check-circle-fill me-1"></i> Safe (>30d)
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if status_filter == 'depleted' %}active bg-secondary text-white{% else %}bg-white border text-secondary{% endif %}" href="?status=depleted&q={{ query }}&supplier={{ selected_supplier }}">
+            Depleted (0 Units)
+        </a>
+    </li>
+</ul>
+
+<!-- Search Bar -->
+<div class="pharmacy-card p-3 mb-4">
+    <form method="GET" class="row g-2 align-items-center">
+        <input type="hidden" name="status" value="{{ status_filter }}">
+        <div class="col-md-7">
+            <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search batch number, medicine name, or generic ingredient...">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select name="supplier" class="form-select">
+                <option value="">All Suppliers</option>
+                {% for sup in suppliers %}
+                <option value="{{ sup.pk }}" {% if selected_supplier == sup.pk|stringformat:"s" %}selected{% endif %}>{{ sup.company_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-primary w-100">Filter</button>
+            {% if query or selected_supplier %}
+            <a href="{% url 'batch_list' %}?status={{ status_filter }}" class="btn btn-outline-secondary" title="Reset"><i class="bi bi-x-lg"></i></a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Batches Table -->
+<div class="pharmacy-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Batch #</th>
+                    <th>Medicine & Generic</th>
+                    <th>Supplier</th>
+                    <th>Available Stock</th>
+                    <th>Purchase Price</th>
+                    <th>Expiry Date</th>
+                    <th>Countdown</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in page_obj %}
+                <tr class="{% if b.is_expired and b.available_quantity > 0 %}table-danger table-opacity-25{% endif %}">
+                    <td>
+                        <a href="{% url 'batch_detail' pk=b.pk %}" class="fw-bold text-decoration-none">
+                            <code>{{ b.batch_number }}</code>
+                        </a>
+                    </td>
+                    <td>
+                        <a href="{% url 'medicine_detail' pk=b.medicine.pk %}" class="fw-semibold text-dark text-decoration-none">
+                            {{ b.medicine.name }}
+                        </a>
+                        <div class="text-muted small">{{ b.medicine.generic_name }}</div>
+                    </td>
+                    <td>
+                        <a href="{% url 'supplier_detail' pk=b.supplier.pk %}" class="text-secondary small text-decoration-none">
+                            <i class="bi bi-building me-1"></i>{{ b.supplier.company_name }}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="fw-bold fs-6">{{ b.available_quantity }}</span>
+                        <span class="text-muted small">/ {{ b.purchase_quantity }} units</span>
+                    </td>
+                    <td>${{ b.purchase_price }}</td>
+                    <td class="fw-semibold">{{ b.expiry_date|date:"M d, Y" }}</td>
+                    <td>
+                        {% if b.days_to_expiry < 0 %}
+                        <span class="text-danger fw-bold small">{{ b.days_to_expiry|stringformat:"d"|slice:"1:" }} days ago</span>
+                        {% else %}
+                        <span class="small fw-semibold">{{ b.days_to_expiry }} days left</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge {{ b.expiry_badge.class }} p-1 px-2">
+                            <i class="bi {{ b.expiry_badge.icon }} me-1"></i>{{ b.expiry_badge.level }}
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'batch_detail' pk=b.pk %}" class="btn btn-outline-primary" title="View details">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if b.is_expired and b.available_quantity > 0 %}
+                            <a href="{% url 'batch_dispose' pk=b.pk %}" class="btn btn-danger" title="Dispose expired batch">
+                                <i class="bi bi-trash"></i> Dispose
+                            </a>
+                            {% endif %}
+                            {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
+                            <a href="{% url 'batch_update' pk=b.pk %}" class="btn btn-outline-secondary" title="Edit batch">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center py-5 text-muted">
+                        <i class="bi bi-boxes display-5 d-block mb-3 text-secondary"></i>
+                        <h5>No medicine batches found</h5>
+                        <p class="small text-muted">No records match the current filter criteria.</p>
+                        <a href="{% url 'batch_create' %}" class="btn btn-primary mt-2">
+                            <i class="bi bi-plus-circle me-1"></i> Stock In New Batch
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center">
+        <span class="text-muted small">Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ total_count }} batches</span>
+        <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&q={{ query }}&supplier={{ selected_supplier }}">&laquo;</a></li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}&status={{ status_filter }}&q={{ query }}&supplier={{ selected_supplier }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&q={{ query }}&supplier={{ selected_supplier }}">&raquo;</a></li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

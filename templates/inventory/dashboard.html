@@ -1,0 +1,387 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Page Header & Actions -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h4 class="fw-bold mb-1 text-dark">Inventory & Expiry Control Dashboard</h4>
+        <p class="text-muted small mb-0">Real-time inventory levels, batch expiration monitoring, and dispensing control.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a href="{% url 'batch_create' %}" class="btn-dark-clean d-flex align-items-center gap-2 text-decoration-none">
+            <i class="bi bi-plus-lg"></i>
+            <span>Stock In / New Batch</span>
+        </a>
+        <a href="{% url 'medicine_list' %}" class="btn-outline-clean d-flex align-items-center gap-2 text-decoration-none">
+            <i class="bi bi-capsule"></i>
+            <span>Browse Medicines</span>
+        </a>
+    </div>
+</div>
+
+<!-- Refined Critical Notice Banner (Only when attention is urgently needed) -->
+{% if expired_batches_count > 0 or critical_7_count > 0 %}
+<div class="p-3 mb-4 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background-color: #fef2f2; border: 1px solid #fecaca;">
+    <div class="d-flex align-items-center gap-3">
+        <div class="rounded-circle d-flex align-items-center justify-content-center bg-danger text-white flex-shrink-0" style="width: 32px; height: 32px;">
+            <i class="bi bi-exclamation-triangle-fill" style="font-size: 0.9rem;"></i>
+        </div>
+        <div>
+            <div class="fw-semibold text-danger small">Action Required on Shelf Stock</div>
+            <div class="text-secondary small">
+                {% if expired_batches_count > 0 %}
+                <strong>{{ expired_batches_count }} expired batch{{ expired_batches_count|pluralize:"es" }}</strong> quarantined from dispensing.
+                {% endif %}
+                {% if critical_7_count > 0 %}
+                <strong>{{ critical_7_count }} batch{{ critical_7_count|pluralize:"es" }}</strong> expiring within 7 days.
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        {% if expired_batches_count > 0 %}
+        <a href="{% url 'batch_list' %}?status=expired" class="btn btn-sm btn-danger py-1 px-3" style="font-size: 0.8rem;">Review Expired</a>
+        {% endif %}
+        {% if critical_7_count > 0 %}
+        <a href="{% url 'batch_list' %}?status=critical_7" class="btn btn-sm btn-outline-danger py-1 px-3" style="font-size: 0.8rem;">Review Critical</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Primary KPI Metrics Grid (Clean 4-Card Layout) -->
+<div class="row g-3 mb-4">
+    <!-- Usable Stock Units -->
+    <div class="col-lg-3 col-sm-6">
+        <div class="stat-card-clean">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="stat-label">Usable Stock</span>
+                <span class="badge-clean badge-clean-safe">Active</span>
+            </div>
+            <div class="stat-value text-dark">{{ total_available_stock }}</div>
+            <div class="stat-subtext">Viable, non-expired units ready for sale</div>
+        </div>
+    </div>
+
+    <!-- Catalog Medicines -->
+    <div class="col-lg-3 col-sm-6">
+        <div class="stat-card-clean">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="stat-label">Medicines Catalog</span>
+                <span class="badge-clean badge-clean-neutral">{{ total_suppliers }} Suppliers</span>
+            </div>
+            <div class="stat-value text-dark">{{ total_medicines }}</div>
+            <div class="stat-subtext">Active pharmaceutical formulations</div>
+        </div>
+    </div>
+
+    <!-- Expiring <= 30 Days -->
+    <div class="col-lg-3 col-sm-6">
+        <div class="stat-card-clean">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="stat-label">Nearing Expiry (&le; 30d)</span>
+                {% if total_nearing_expiry > 0 %}
+                <span class="badge-clean badge-clean-warn">Watchlist</span>
+                {% else %}
+                <span class="badge-clean badge-clean-safe">Healthy</span>
+                {% endif %}
+            </div>
+            <div class="stat-value {% if total_nearing_expiry > 0 %}text-warning{% else %}text-dark{% endif %}">
+                {{ total_nearing_expiry }}
+            </div>
+            <div class="stat-subtext">Prioritized for FEFO dispensing</div>
+        </div>
+    </div>
+
+    <!-- Expired Stock (Quarantined) -->
+    <div class="col-lg-3 col-sm-6">
+        <div class="stat-card-clean">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="stat-label">Quarantined Stock</span>
+                {% if expired_batches_count > 0 %}
+                <span class="badge-clean badge-clean-danger">Locked</span>
+                {% else %}
+                <span class="badge-clean badge-clean-safe">Clean</span>
+                {% endif %}
+            </div>
+            <div class="stat-value {% if expired_batches_count > 0 %}text-danger{% else %}text-dark{% endif %}">
+                {{ expired_batches_count }} <span class="fs-6 fw-normal text-muted">batches</span>
+            </div>
+            <div class="stat-subtext">{{ total_expired_stock }} units isolated for disposal</div>
+        </div>
+    </div>
+</div>
+
+<!-- Two-Column Operational Focus Area -->
+<div class="row g-4 mb-4">
+    <!-- Left: Batches Approaching Expiry -->
+    <div class="col-lg-6">
+        <div class="pharmacy-card h-100">
+            <div class="card-header">
+                <span class="fw-semibold text-dark">Batches Nearing Expiration</span>
+                <a href="{% url 'batch_list' %}" class="small text-decoration-none text-muted">View all lots &rarr;</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Medicine</th>
+                            <th>Lot #</th>
+                            <th>Units</th>
+                            <th>Expiry</th>
+                            <th>Status</th>
+                            <th class="pe-3 text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in urgent_batches_table %}
+                        <tr>
+                            <td class="ps-3 fw-semibold text-dark">
+                                <a href="{% url 'medicine_detail' pk=b.medicine.pk %}" class="text-dark text-decoration-none">
+                                    {{ b.medicine.name }}
+                                </a>
+                            </td>
+                            <td><span class="font-monospace text-muted small">{{ b.batch_number }}</span></td>
+                            <td class="fw-medium">{{ b.available_quantity }}</td>
+                            <td class="small text-muted">{{ b.expiry_date|date:"M d, Y" }}</td>
+                            <td>
+                                {% if b.is_expired %}
+                                <span class="badge-clean badge-clean-danger">Expired</span>
+                                {% elif b.days_until_expiry <= 7 %}
+                                <span class="badge-clean badge-clean-danger">&le; 7 days</span>
+                                {% elif b.days_until_expiry <= 15 %}
+                                <span class="badge-clean badge-clean-warn">&le; 15 days</span>
+                                {% else %}
+                                <span class="badge-clean badge-clean-warn">&le; 30 days</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-3 text-end">
+                                {% if b.is_expired %}
+                                <a href="{% url 'batch_dispose' pk=b.pk %}" class="btn btn-sm btn-outline-danger py-0 px-2 small">
+                                    Dispose
+                                </a>
+                                {% else %}
+                                <a href="{% url 'stock_dispense' pk=b.medicine.pk %}" class="btn btn-sm btn-outline-clean py-0 px-2 small">
+                                    Dispense
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted small">
+                                <i class="bi bi-shield-check text-success me-1"></i> No batches expiring within the next 30 days.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Low Stock & Shortages -->
+    <div class="col-lg-6">
+        <div class="pharmacy-card h-100">
+            <div class="card-header">
+                <span class="fw-semibold text-dark">Stock Shortages & Replenishment</span>
+                <a href="{% url 'report_low_stock' %}" class="small text-decoration-none text-muted">Stock report &rarr;</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Medicine</th>
+                            <th>Available</th>
+                            <th>Min Level</th>
+                            <th>Status</th>
+                            <th class="pe-3 text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for med in out_of_stock_list %}
+                        <tr>
+                            <td class="ps-3 fw-semibold text-dark">
+                                <a href="{% url 'medicine_detail' pk=med.pk %}" class="text-dark text-decoration-none">
+                                    {{ med.name }}
+                                </a>
+                            </td>
+                            <td><span class="badge-clean badge-clean-danger">0 units</span></td>
+                            <td class="text-muted small">{{ med.minimum_stock_threshold }} units</td>
+                            <td><span class="badge-clean badge-clean-danger">Out of Stock</span></td>
+                            <td class="pe-3 text-end">
+                                <a href="{% url 'batch_create' %}?medicine={{ med.pk }}" class="btn btn-sm btn-dark-clean py-0 px-2 small">
+                                    Restock
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% for med in low_stock_list %}
+                        <tr>
+                            <td class="ps-3 fw-semibold text-dark">
+                                <a href="{% url 'medicine_detail' pk=med.pk %}" class="text-dark text-decoration-none">
+                                    {{ med.name }}
+                                </a>
+                            </td>
+                            <td><span class="badge-clean badge-clean-warn">{{ med.total_available_stock }} units</span></td>
+                            <td class="text-muted small">{{ med.minimum_stock_threshold }} units</td>
+                            <td><span class="badge-clean badge-clean-warn">Low Stock</span></td>
+                            <td class="pe-3 text-end">
+                                <a href="{% url 'batch_create' %}?medicine={{ med.pk }}" class="btn btn-sm btn-outline-clean py-0 px-2 small">
+                                    Restock
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not out_of_stock_list and not low_stock_list %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted small">
+                                <i class="bi bi-check-circle text-success me-1"></i> All catalog medicines are above minimum safety thresholds.
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Section: Expiry Distribution Chart & Recent Movements -->
+<div class="row g-4">
+    <!-- Expiry Breakdown Chart -->
+    <div class="col-lg-4">
+        <div class="pharmacy-card h-100">
+            <div class="card-header">
+                <span class="fw-semibold text-dark">Expiry Horizons</span>
+                <span class="text-muted small">Status breakdown</span>
+            </div>
+            <div class="card-body">
+                <div style="height: 200px; position: relative;">
+                    <canvas id="expiryChart"></canvas>
+                </div>
+                <div class="d-flex justify-content-between text-center mt-3 pt-3 border-top small font-monospace">
+                    <div>
+                        <div class="text-danger fw-bold">{{ expired_batches_count }}</div>
+                        <span class="text-muted" style="font-size: 0.72rem;">Expired</span>
+                    </div>
+                    <div>
+                        <div class="text-danger fw-bold">{{ critical_7_count }}</div>
+                        <span class="text-muted" style="font-size: 0.72rem;">&le; 7d</span>
+                    </div>
+                    <div>
+                        <div class="text-warning fw-bold">{{ urgent_15_count }}</div>
+                        <span class="text-muted" style="font-size: 0.72rem;">&le; 15d</span>
+                    </div>
+                    <div>
+                        <div class="text-info fw-bold">{{ warning_30_count }}</div>
+                        <span class="text-muted" style="font-size: 0.72rem;">&le; 30d</span>
+                    </div>
+                    <div>
+                        <div class="text-success fw-bold">{{ safe_batches_count }}</div>
+                        <span class="text-muted" style="font-size: 0.72rem;">Safe</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Transactions Ledger -->
+    <div class="col-lg-8">
+        <div class="pharmacy-card h-100">
+            <div class="card-header">
+                <span class="fw-semibold text-dark">Recent Ledger Transactions</span>
+                <a href="{% url 'transaction_list' %}" class="small text-decoration-none text-muted">Full audit log &rarr;</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Date</th>
+                            <th>Type</th>
+                            <th>Medicine</th>
+                            <th>Lot #</th>
+                            <th>Units</th>
+                            <th class="pe-3">User</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in recent_transactions %}
+                        <tr>
+                            <td class="ps-3 small text-muted">{{ t.timestamp|date:"M d, H:i" }}</td>
+                            <td>
+                                {% if t.transaction_type == 'PURCHASE' %}
+                                <span class="badge-clean badge-clean-safe">Stock In</span>
+                                {% elif t.transaction_type == 'DISPENSE' %}
+                                <span class="badge-clean badge-clean-neutral">Dispense</span>
+                                {% elif t.transaction_type == 'DISPOSAL_EXPIRED' %}
+                                <span class="badge-clean badge-clean-danger">Disposal</span>
+                                {% else %}
+                                <span class="badge-clean badge-clean-neutral">{{ t.get_transaction_type_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-semibold text-dark">
+                                <a href="{% url 'medicine_detail' pk=t.medicine.pk %}" class="text-dark text-decoration-none">
+                                    {{ t.medicine.name }}
+                                </a>
+                            </td>
+                            <td><span class="font-monospace text-muted small">{{ t.batch.batch_number|default:"-" }}</span></td>
+                            <td class="fw-medium">{{ t.quantity }}</td>
+                            <td class="pe-3 small text-muted">{{ t.performed_by.username|default:"System" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted small">No recent movements recorded.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const expiryLabels = {{ chart_expiry_labels_json|safe }};
+    const expiryData = {{ chart_expiry_data_json|safe }};
+
+    const ctxExpiry = document.getElementById('expiryChart');
+    if (ctxExpiry) {
+        new Chart(ctxExpiry.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: expiryLabels,
+                datasets: [{
+                    data: expiryData,
+                    backgroundColor: [
+                        '#ef4444', // Expired
+                        '#f97316', // Critical 7d
+                        '#f59e0b', // Urgent 15d
+                        '#0284c7', // Notice 30d
+                        '#10b981'  // Safe
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                cutout: '72%'
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Expired Medicines Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{% url 'reports_index' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+            <h4 class="fw-bold mb-0 text-danger">Expired Medicines Audit Report</h4>
+        </div>
+        <p class="text-muted small mb-0 ms-4">Quarantined batches that have surpassed expiry dates and are excluded from active sales.</p>
+    </div>
+    <a href="?export=csv" class="btn btn-success">
+        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export to CSV
+    </a>
+</div>
+
+<!-- Financial Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card border-danger">
+            <span class="stat-label text-danger">Expired Batches Count</span>
+            <div class="stat-value text-danger">{{ batches.count }}</div>
+            <div class="stat-subtext">Total batches requiring disposal</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card border-danger">
+            <span class="stat-label text-danger">Total Expired Units</span>
+            <div class="stat-value text-danger">{{ total_units }}</div>
+            <div class="stat-subtext">Physical units currently quarantined</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card border-danger">
+            <span class="stat-label text-danger">Estimated Financial Loss</span>
+            <div class="stat-value text-danger">${{ total_loss|floatformat:2 }}</div>
+            <div class="stat-subtext">Calculated at batch purchase cost</div>
+        </div>
+    </div>
+</div>
+
+<!-- Expired Batches Table -->
+<div class="pharmacy-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Medicine</th>
+                    <th>Category</th>
+                    <th>Batch #</th>
+                    <th>Expiry Date</th>
+                    <th>Days Expired</th>
+                    <th>Expired Units</th>
+                    <th>Unit Cost</th>
+                    <th>Estimated Loss</th>
+                    <th>Supplier</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in batches %}
+                <tr class="table-danger table-opacity-25">
+                    <td>
+                        <a href="{% url 'medicine_detail' pk=b.medicine.pk %}" class="fw-bold text-dark text-decoration-none">
+                            {{ b.medicine.name }}
+                        </a>
+                        <div class="text-muted small">{{ b.medicine.generic_name }}</div>
+                    </td>
+                    <td><span class="badge bg-light text-dark border">{{ b.medicine.category.name }}</span></td>
+                    <td><code>{{ b.batch_number }}</code></td>
+                    <td class="text-danger fw-semibold">{{ b.expiry_date|date:"M d, Y" }}</td>
+                    <td>
+                        <span class="badge bg-danger">{{ b.days_to_expiry|stringformat:"d"|slice:"1:" }} days ago</span>
+                    </td>
+                    <td class="fw-bold text-danger">{{ b.available_quantity }}</td>
+                    <td>${{ b.purchase_price }}</td>
+                    <td class="fw-bold text-danger">
+                        ${% widthratio b.available_quantity 1 b.purchase_price %}
+                    </td>
+                    <td class="small">{{ b.supplier.company_name }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'batch_dispose' pk=b.pk %}" class="btn btn-sm btn-danger">
+                            <i class="bi bi-trash me-1"></i> Dispose
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center py-5 text-muted">
+                        <i class="bi bi-check-circle-fill text-success display-5 d-block mb-3"></i>
+                        <h5>No expired medicines in inventory!</h5>
+                        <p class="small text-muted">All active stock batches are within valid shelf-life.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block title %}Automated Expiry Alerts & Notices{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h4 class="fw-bold mb-1 text-dark">
+            <i class="bi bi-bell-fill text-primary me-2"></i>Automated Medicine Expiry Alert System
+        </h4>
+        <p class="text-muted small mb-0">Dispatched email alerts, deduplication logs, and active expiration warnings.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <form method="POST" action="{% url 'trigger_expiry_scan' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary d-flex align-items-center gap-1 shadow-sm">
+                <i class="bi bi-arrow-repeat"></i> Run Expiry Scan & Send Alerts
+            </button>
+        </form>
+        {% if global_unread_notifications_count > 0 %}
+        <form method="POST" action="{% url 'mark_all_notifications_read' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary">
+                <i class="bi bi-check2-all me-1"></i> Mark All as Read
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Category Filter Pills -->
+<div class="pharmacy-card p-3 mb-4">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="text-muted small fw-bold me-2">Filter Level:</span>
+        <a href="?category=" class="btn btn-sm {% if not category_filter %}btn-dark{% else %}btn-light border{% endif %}">All Alerts</a>
+        <a href="?category=EXPIRED" class="btn btn-sm {% if category_filter == 'EXPIRED' %}btn-danger{% else %}btn-light border text-danger{% endif %}">
+            <i class="bi bi-x-octagon-fill me-1"></i> Already Expired
+        </a>
+        <a href="?category=CRITICAL_7" class="btn btn-sm {% if category_filter == 'CRITICAL_7' %}btn-danger{% else %}btn-light border text-danger{% endif %}">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i> &le; 7 Days
+        </a>
+        <a href="?category=URGENT_15" class="btn btn-sm {% if category_filter == 'URGENT_15' %}btn-warning text-dark{% else %}btn-light border text-warning text-dark{% endif %}">
+            <i class="bi bi-exclamation-circle-fill me-1"></i> 8-15 Days
+        </a>
+        <a href="?category=WARNING_30" class="btn btn-sm {% if category_filter == 'WARNING_30' %}btn-info text-dark{% else %}btn-light border text-info text-dark{% endif %}">
+            <i class="bi bi-info-circle-fill me-1"></i> 16-30 Days
+        </a>
+
+        <div class="ms-auto d-flex gap-2">
+            <a href="?category={{ category_filter }}&status=unread" class="btn btn-sm {% if status_filter == 'unread' %}btn-primary{% else %}btn-light border{% endif %}">
+                Unread Only
+            </a>
+            <a href="?category={{ category_filter }}&status=read" class="btn btn-sm {% if status_filter == 'read' %}btn-primary{% else %}btn-light border{% endif %}">
+                Read
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Notifications Table -->
+<div class="pharmacy-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Alert Category</th>
+                    <th>Medicine</th>
+                    <th>Batch #</th>
+                    <th>Stock at Risk</th>
+                    <th>Expiry Date</th>
+                    <th>Dispatched To</th>
+                    <th>Sent At</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for n in page_obj %}
+                <tr class="{% if not n.is_read %}table-light fw-semibold{% endif %}">
+                    <td>
+                        <span class="badge {{ n.badge_class }} p-1 px-2" style="font-size: 0.72rem;">
+                            {{ n.get_alert_category_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{% url 'medicine_detail' pk=n.batch.medicine.pk %}" class="fw-bold text-dark text-decoration-none">
+                            {{ n.batch.medicine.name }}
+                        </a>
+                        <div class="text-muted small">{{ n.batch.medicine.generic_name }}</div>
+                    </td>
+                    <td>
+                        <a href="{% url 'batch_detail' pk=n.batch.pk %}" class="text-decoration-none">
+                            <code>{{ n.batch.batch_number }}</code>
+                        </a>
+                    </td>
+                    <td>
+                        <span class="fw-bold text-danger">{{ n.batch.available_quantity }}</span> units
+                    </td>
+                    <td class="small">{{ n.batch.expiry_date|date:"M d, Y" }}</td>
+                    <td class="small text-truncate" style="max-width: 180px;" title="{{ n.recipient_email }}">
+                        <i class="bi bi-envelope me-1 text-muted"></i>{{ n.recipient_email }}
+                    </td>
+                    <td class="small text-muted">{{ n.sent_at|date:"M d, Y H:i" }}</td>
+                    <td>
+                        {% if n.status == 'SENT' %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                            <i class="bi bi-check2 me-1"></i>Delivered
+                        </span>
+                        {% else %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle" title="{{ n.error_message }}">
+                            <i class="bi bi-x-circle me-1"></i>Failed
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'batch_detail' pk=n.batch.pk %}" class="btn btn-outline-primary" title="View Batch">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if not n.is_read %}
+                            <a href="{% url 'mark_notification_read' pk=n.pk %}" class="btn btn-outline-secondary" title="Mark as Read">
+                                <i class="bi bi-check"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center py-5 text-muted">
+                        <i class="bi bi-bell-slash display-5 d-block mb-3 text-secondary"></i>
+                        <h5>No notifications matching criteria</h5>
+                        <p class="small text-muted">Trigger an automated expiry scan to verify batch inventory.</p>
+                        <form method="POST" action="{% url 'trigger_expiry_scan' %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary mt-2">
+                                <i class="bi bi-arrow-repeat me-1"></i> Run Expiry Scan Now
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center">
+        <span class="text-muted small">Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ total_count }} notifications</span>
+        <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&category={{ category_filter }}&status={{ status_filter }}">&laquo;</a></li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}&category={{ category_filter }}&status={{ status_filter }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&category={{ category_filter }}&status={{ status_filter }}">&raquo;</a></li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

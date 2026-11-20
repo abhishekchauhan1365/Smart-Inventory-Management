@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Supplier-wise Inventory Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{% url 'reports_index' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+            <h4 class="fw-bold mb-0 text-dark">Supplier-wise Inventory Valuation</h4>
+        </div>
+        <p class="text-muted small mb-0 ms-4">Vendor inventory holding analysis, total supplied batches, and stock valuations.</p>
+    </div>
+    <a href="?export=csv" class="btn btn-success">
+        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export to CSV
+    </a>
+</div>
+
+<div class="pharmacy-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Supplier / Distributor</th>
+                    <th>Contact Person</th>
+                    <th>Contact Phone</th>
+                    <th>Email</th>
+                    <th>Batches Supplied</th>
+                    <th>Active Stock Units</th>
+                    <th>Total Inventory Value</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in supplier_data %}
+                <tr>
+                    <td>
+                        <a href="{% url 'supplier_detail' pk=item.supplier.pk %}" class="fw-bold text-dark text-decoration-none">
+                            <i class="bi bi-building me-1 text-primary"></i>{{ item.supplier.company_name }}
+                        </a>
+                    </td>
+                    <td>{{ item.supplier.name }}</td>
+                    <td class="small">{{ item.supplier.contact_number }}</td>
+                    <td class="small">{{ item.supplier.email }}</td>
+                    <td><span class="badge bg-light text-dark border">{{ item.total_batches }} Batches</span></td>
+                    <td class="fw-semibold">{{ item.total_units }} units</td>
+                    <td class="fw-bold text-success">${{ item.total_value|floatformat:2 }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'supplier_detail' pk=item.supplier.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye me-1"></i> View Vendor
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">No suppliers registered in system.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

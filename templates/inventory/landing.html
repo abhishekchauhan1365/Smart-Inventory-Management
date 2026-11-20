@@ -1,0 +1,350 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartRx — Medicine Inventory & Expiry Control</title>
+    <!-- Fonts: Inter for clean typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Custom Clean Landing Styles -->
+    <link rel="stylesheet" href="{% static 'css/landing.css' %}">
+</head>
+<body class="landing-clean">
+
+    <!-- Minimalist Navbar -->
+    <header class="clean-nav">
+        <div class="container d-flex align-items-center justify-content-between">
+            <!-- Brand Logo -->
+            <a href="{% url 'landing' %}" class="clean-logo">
+                <div class="clean-logo-icon">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+                <span>SmartRx</span>
+            </a>
+
+            <!-- Quiet Nav Links -->
+            <nav class="clean-nav-links d-none d-md-flex">
+                <a href="#features" class="clean-nav-link">Features</a>
+                <a href="#workflow" class="clean-nav-link">How It Works</a>
+                <a href="#test-drive" class="clean-nav-link">Demo Accounts</a>
+            </nav>
+
+            <!-- Action -->
+            <div class="d-flex align-items-center gap-3">
+                {% if request.user.is_authenticated %}
+                <a href="{% url 'dashboard' %}" class="btn-clean-primary py-2 px-3">
+                    <span>Open Dashboard</span>
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+                {% else %}
+                <a href="{% url 'login' %}" class="clean-nav-link d-none d-sm-inline-block">Sign in</a>
+                <a href="{% url 'login' %}" class="btn-clean-primary py-2 px-3">
+                    <span>Get Started</span>
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="py-5 py-lg-6 text-center">
+        <div class="container">
+            <!-- Subtle Tag -->
+            <div class="mb-3">
+                <div class="clean-tag">
+                    <span class="clean-tag-dot"></span>
+                    <span>Dispensary & Batch Expiry System</span>
+                </div>
+            </div>
+
+            <!-- Hero Headline -->
+            <h1 class="clean-hero-title mb-3">
+                Medicine inventory without the surprise expirations.
+            </h1>
+
+            <!-- Hero Subtitle -->
+            <p class="clean-hero-lead mb-4">
+                A calm, reliable inventory system for community pharmacies and clinics. Tracks batch lots, enforces First-Expiring, First-Out (FEFO) dispensing, and isolates expired stock automatically.
+            </p>
+
+            <!-- Hero Actions -->
+            <div class="d-flex align-items-center justify-content-center gap-3 flex-wrap mb-5">
+                {% if request.user.is_authenticated %}
+                <a href="{% url 'dashboard' %}" class="btn-clean-primary py-2 px-4 fs-6">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Go to Dashboard</span>
+                </a>
+                {% else %}
+                <a href="{% url 'login' %}" class="btn-clean-primary py-2 px-4 fs-6">
+                    <span>Sign In to Dispensary</span>
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+                <a href="#test-drive" class="btn-clean-secondary py-2 px-4 fs-6">
+                    <span>View Test Accounts</span>
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- Clean Product Preview Card -->
+            <div class="preview-card mx-auto" style="max-width: 920px;">
+                <div class="preview-topbar">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="preview-dot"></span>
+                        <span class="preview-dot"></span>
+                        <span class="preview-dot"></span>
+                        <span class="text-muted small ms-2 fw-medium">Live Inventory Telemetry</span>
+                    </div>
+                    <span class="badge-clean-safe">System Operational</span>
+                </div>
+
+                <div class="p-4 p-md-5">
+                    <!-- Metrics Row -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="preview-stat-card">
+                                <div class="preview-stat-lbl mb-1">Viable Stock Units</div>
+                                <div class="preview-stat-val text-primary">{{ total_available_stock|default:"850" }}</div>
+                                <div class="text-muted small mt-1">Ready for dispensing</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="preview-stat-card">
+                                <div class="preview-stat-lbl mb-1">Catalog Medicines</div>
+                                <div class="preview-stat-val">{{ total_medicines|default:"12" }}</div>
+                                <div class="text-muted small mt-1">Across {{ total_categories|default:"4" }} categories</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="preview-stat-card">
+                                <div class="preview-stat-lbl mb-1">Approaching Expiry (&le; 30d)</div>
+                                <div class="preview-stat-val text-warning">{{ critical_7_count|add:urgent_15_count|add:warning_30_count|default:"3" }}</div>
+                                <div class="text-muted small mt-1">Flagged for FEFO priority</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mini Clean Table -->
+                    <div class="border rounded-3 overflow-hidden">
+                        <div class="bg-light px-3 py-2 border-bottom d-flex justify-content-between align-items-center">
+                            <span class="small fw-semibold text-secondary">Active Batch Registry</span>
+                            <span class="small text-muted">FEFO Sorted</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 small">
+                                <thead class="table-light text-muted">
+                                    <tr>
+                                        <th class="ps-3">Medicine</th>
+                                        <th>Batch #</th>
+                                        <th>Units</th>
+                                        <th>Expiry Status</th>
+                                        <th class="pe-3 text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for med in sample_medicines|slice:":3" %}
+                                    <tr>
+                                        <td class="ps-3 fw-semibold text-dark">{{ med.name }}</td>
+                                        <td class="text-muted">LOT-{{ forloop.counter }}024</td>
+                                        <td class="fw-medium">{{ med.total_usable_stock|default:"45" }}</td>
+                                        <td>
+                                            {% if forloop.first %}
+                                            <span class="badge-clean-warn"><i class="bi bi-clock me-1"></i>Expires in 12d</span>
+                                            {% elif forloop.last %}
+                                            <span class="badge-clean-safe"><i class="bi bi-check-circle me-1"></i>Valid (180d)</span>
+                                            {% else %}
+                                            <span class="badge-clean-safe"><i class="bi bi-check-circle me-1"></i>Valid (90d)</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="pe-3 text-end">
+                                            <a href="{% url 'login' %}" class="text-decoration-none text-primary fw-medium">View &rarr;</a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td class="ps-3 fw-semibold text-dark">Amoxil 500mg</td>
+                                        <td class="text-muted">LOT-AMX-2024</td>
+                                        <td class="fw-medium">40</td>
+                                        <td><span class="badge-clean-warn"><i class="bi bi-clock me-1"></i>Expires in 14d</span></td>
+                                        <td class="pe-3 text-end"><a href="{% url 'login' %}" class="text-decoration-none text-primary fw-medium">View &rarr;</a></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-3 fw-semibold text-dark">Dolo 650</td>
+                                        <td class="text-muted">LOT-DLO-2025</td>
+                                        <td class="fw-medium">120</td>
+                                        <td><span class="badge-clean-safe"><i class="bi bi-check-circle me-1"></i>Valid (210d)</span></td>
+                                        <td class="pe-3 text-end"><a href="{% url 'login' %}" class="text-decoration-none text-primary fw-medium">View &rarr;</a></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Core Principles (Minimalist 3 Columns) -->
+    <section id="features" class="py-5 py-lg-6 border-top bg-white">
+        <div class="container">
+            <div class="text-center mb-5" style="max-width: 600px; margin: 0 auto;">
+                <h2 class="h3 fw-bold mb-2">Designed for daily dispensary safety.</h2>
+                <p class="text-secondary small">Every feature focuses on eliminating stock waste and preventing expired medication from being handed to patients.</p>
+            </div>
+
+            <div class="row g-4">
+                <!-- Col 1 -->
+                <div class="col-md-4">
+                    <div class="clean-feature-card">
+                        <div class="clean-feature-icon">
+                            <i class="bi bi-boxes"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2">Batch & Lot Lineage</h5>
+                        <p class="text-secondary small mb-0">
+                            Every incoming shipment is recorded with its unique batch number, manufacturing date, expiry date, purchase cost, and supplier. No aggregate guesswork.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Col 2 -->
+                <div class="col-md-4">
+                    <div class="clean-feature-card">
+                        <div class="clean-feature-icon">
+                            <i class="bi bi-arrow-repeat"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2">FEFO Dispensing</h5>
+                        <p class="text-secondary small mb-0">
+                            First-Expiring, First-Out logic guides staff to dispense batches nearing expiration first, preventing older stock from being forgotten behind newer boxes.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Col 3 -->
+                <div class="col-md-4">
+                    <div class="clean-feature-card">
+                        <div class="clean-feature-icon">
+                            <i class="bi bi-shield-x"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2">Automatic Quarantine</h5>
+                        <p class="text-secondary small mb-0">
+                            Batches that cross their expiry date are immediately removed from available stock in the database, locking them against accidental dispensing.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: How It Works (Clean 3-Step Flow) -->
+    <section id="workflow" class="py-5 py-lg-6 border-top">
+        <div class="container" style="max-width: 860px;">
+            <div class="text-center mb-5">
+                <h2 class="h3 fw-bold mb-2">How it works</h2>
+                <p class="text-secondary small">A streamlined workflow from delivery receiving to customer dispensing.</p>
+            </div>
+
+            <div class="d-flex flex-column gap-4">
+                <div class="d-flex align-items-start gap-4 p-4 bg-white border rounded-3">
+                    <div class="rounded-circle bg-light text-dark fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
+                        1
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-1">Stock In with Lot Details</h6>
+                        <p class="text-secondary small mb-0">
+                            When suppliers deliver stock, receive items with their exact lot number, unit purchase price, and expiry date. Multiple batches of the same medicine sit side-by-side cleanly.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-start gap-4 p-4 bg-white border rounded-3">
+                    <div class="rounded-circle bg-light text-dark fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
+                        2
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-1">Continuous Expiry Monitoring</h6>
+                        <p class="text-secondary small mb-0">
+                            The system categorizes batches into 30-day, 15-day, and 7-day alert horizons. Near-expiry batches can be returned to suppliers for credit before return windows expire.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-start gap-4 p-4 bg-white border rounded-3">
+                    <div class="rounded-circle bg-light text-dark fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
+                        3
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-1">Safe FEFO Dispensing & Audit Logs</h6>
+                        <p class="text-secondary small mb-0">
+                            During customer sales, the dispenser allocates from the earliest-expiring viable batch. Every transaction is permanently recorded with timestamps and operator IDs.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Demo Access & Next Step -->
+    <section id="test-drive" class="py-5 py-lg-6 border-top bg-white">
+        <div class="container" style="max-width: 680px;">
+            <div class="text-center p-4 p-md-5 border rounded-4 bg-light">
+                <div class="clean-logo-icon mx-auto mb-3" style="width: 44px; height: 44px; font-size: 1.25rem;">
+                    <i class="bi bi-key"></i>
+                </div>
+                <h3 class="fw-bold mb-2">Test Drive the System Locally</h3>
+                <p class="text-secondary small mb-4">
+                    The local database is seeded with sample medicines, active batches, and suppliers. Use either account below on the sign-in page:
+                </p>
+
+                <!-- Clean Credential Cards -->
+                <div class="row g-3 mb-4 text-start">
+                    <div class="col-sm-6">
+                        <div class="p-3 bg-white border rounded-3">
+                            <span class="badge bg-secondary bg-opacity-10 text-dark small mb-1">Administrator</span>
+                            <div class="small text-secondary">Username: <strong class="text-dark">admin</strong></div>
+                            <div class="small text-secondary">Password: <code class="text-dark">admin123</code></div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="p-3 bg-white border rounded-3">
+                            <span class="badge bg-secondary bg-opacity-10 text-dark small mb-1">Staff Dispenser</span>
+                            <div class="small text-secondary">Username: <strong class="text-dark">staff</strong></div>
+                            <div class="small text-secondary">Password: <code class="text-dark">staff123</code></div>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="{% url 'login' %}" class="btn-clean-primary py-2 px-4 fs-6 w-100 justify-content-center">
+                    <span>Continue to Sign In Page</span>
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Minimalist Footer -->
+    <footer class="clean-footer">
+        <div class="container d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-semibold text-dark">SmartRx</span>
+                <span>&middot;</span>
+                <span>Medicine Inventory & Expiry Management</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <a href="{% url 'login' %}">Sign In</a>
+                <span>&middot;</span>
+                <span>Local Server: 127.0.0.1:8000</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

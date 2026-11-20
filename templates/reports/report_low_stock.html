@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Low Stock & Shortages Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{% url 'reports_index' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+            <h4 class="fw-bold mb-0 text-danger">Low-Stock & Shortages Report</h4>
+        </div>
+        <p class="text-muted small mb-0 ms-4">Identifies medicines at or below safety buffer stock for proactive procurement replenishment.</p>
+    </div>
+    <a href="?export=csv" class="btn btn-success">
+        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export to CSV
+    </a>
+</div>
+
+<!-- Table -->
+<div class="pharmacy-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Medicine</th>
+                    <th>Category</th>
+                    <th>Usable Non-Expired Stock</th>
+                    <th>Safety Threshold</th>
+                    <th>Stock Deficit</th>
+                    <th>Status</th>
+                    <th>Preferred Supplier</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for med in medicines %}
+                <tr class="{% if med.is_out_of_stock %}table-danger table-opacity-25{% else %}table-warning table-opacity-25{% endif %}">
+                    <td>
+                        <a href="{% url 'medicine_detail' pk=med.pk %}" class="fw-bold text-dark text-decoration-none">
+                            {{ med.name }}
+                        </a>
+                        <div class="text-muted small">
+                            <span class="badge bg-light text-dark border">{{ med.medicine_id }}</span>
+                            {{ med.generic_name }}
+                        </div>
+                    </td>
+                    <td><span class="badge bg-light text-dark border">{{ med.category.name }}</span></td>
+                    <td>
+                        <span class="fw-bold fs-6 {% if med.is_out_of_stock %}text-danger{% else %}text-warning text-dark{% endif %}">
+                            {{ med.total_available_stock }}
+                        </span> units
+                    </td>
+                    <td class="text-muted">{{ med.minimum_stock_threshold }} units</td>
+                    <td>
+                        <span class="badge bg-danger">
+                            Deficit of {{ med.minimum_stock_threshold }} units
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge {{ med.stock_status_badge.class }}">{{ med.stock_status_badge.label }}</span>
+                    </td>
+                    <td>
+                        {% if med.supplier %}
+                        <a href="{% url 'supplier_detail' pk=med.supplier.pk %}" class="small text-decoration-none">
+                            <i class="bi bi-building me-1"></i>{{ med.supplier.company_name }}
+                        </a>
+                        <div class="text-muted small">{{ med.supplier.contact_number }}</div>
+                        {% else %}
+                        <span class="text-muted small">No supplier set</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'batch_create' %}?medicine={{ med.pk }}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-plus-circle me-1"></i> Order Stock
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <i class="bi bi-check-circle-fill text-success display-5 d-block mb-3"></i>
+                        <h5>All medicines have healthy stock levels above minimum thresholds!</h5>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

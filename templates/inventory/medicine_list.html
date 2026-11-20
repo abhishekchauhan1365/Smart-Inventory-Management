@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}Medicines Catalog{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h4 class="fw-bold mb-1 text-dark">Medicines Inventory Directory</h4>
+        <p class="text-muted small mb-0">Search, filter, monitor stock levels, and inspect batches.</p>
+    </div>
+    <div class="d-flex gap-2">
+        {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
+        <a href="{% url 'medicine_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Add Medicine
+        </a>
+        {% endif %}
+        <a href="{% url 'batch_create' %}" class="btn btn-outline-primary">
+            <i class="bi bi-boxes me-1"></i> Stock In / Batch
+        </a>
+    </div>
+</div>
+
+<!-- Search & Multi-Filters Toolbar -->
+<div class="pharmacy-card p-3 mb-4">
+    <form method="GET" class="row g-2 align-items-center">
+        <div class="col-lg-4 col-md-6">
+            <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search by name, generic, ID, manufacturer...">
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-3">
+            <select name="category" class="form-select">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat.pk }}" {% if selected_category == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-3">
+            <select name="supplier" class="form-select">
+                <option value="">All Suppliers</option>
+                {% for sup in suppliers %}
+                <option value="{{ sup.pk }}" {% if selected_supplier == sup.pk|stringformat:"s" %}selected{% endif %}>{{ sup.company_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-4">
+            <select name="stock_status" class="form-select">
+                <option value="">All Stock Levels</option>
+                <option value="in_stock" {% if stock_filter == 'in_stock' %}selected{% endif %}>In Stock (Adequate)</option>
+                <option value="low_stock" {% if stock_filter == 'low_stock' %}selected{% endif %}>Low Stock Only</option>
+                <option value="out_of_stock" {% if stock_filter == 'out_of_stock' %}selected{% endif %}>Out of Stock</option>
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-4 d-flex gap-2">
+            <select name="sort" class="form-select">
+                <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Sort: Name</option>
+                <option value="price_asc" {% if sort_by == 'price_asc' %}selected{% endif %}>Price: Low &rarr; High</option>
+                <option value="price_desc" {% if sort_by == 'price_desc' %}selected{% endif %}>Price: High &rarr; Low</option>
+                <option value="id" {% if sort_by == 'id' %}selected{% endif %}>Medicine ID</option>
+            </select>
+            <button type="submit" class="btn btn-primary" title="Filter"><i class="bi bi-funnel"></i></button>
+            {% if query or selected_category or selected_supplier or stock_filter or sort_by != 'name' %}
+            <a href="{% url 'medicine_list' %}" class="btn btn-outline-secondary" title="Reset Filters"><i class="bi bi-x-lg"></i></a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Medicines Table -->
+<div class="pharmacy-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Medicine Details</th>
+                    <th>Category</th>
+                    <th>Manufacturer</th>
+                    <th>Price</th>
+                    <th>Usable Stock</th>
+                    <th>Min Threshold</th>
+                    <th>Expired Stock</th>
+                    <th>Earliest Expiry</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for med in page_obj %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div>
+                                <a href="{% url 'medicine_detail' pk=med.pk %}" class="fw-bold text-dark text-decoration-none">
+                                    {{ med.name }}
+                                </a>
+                                <div class="text-muted small">
+                                    <span class="badge bg-light text-secondary border me-1">{{ med.medicine_id }}</span>
+                                    {{ med.generic_name }}
+                                    {% if med.strength %}&bull; {{ med.strength }}{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="badge bg-secondary-subtle text-secondary border">{{ med.category.name }}</span></td>
+                    <td class="small">{{ med.manufacturer }}</td>
+                    <td class="fw-bold text-dark">${{ med.unit_price }}</td>
+                    <td>
+                        {% if med.is_out_of_stock %}
+                        <span class="badge bg-danger">0 units (Out of Stock)</span>
+                        {% elif med.is_low_stock %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ med.total_available_stock }} units (Low)</span>
+                        {% else %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>{{ med.total_available_stock }} units</span>
+                        {% endif %}
+                    </td>
+                    <td class="small text-muted">{{ med.minimum_stock_threshold }} units</td>
+                    <td>
+                        {% if med.total_expired_stock > 0 %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                            <i class="bi bi-x-octagon-fill me-1"></i>{{ med.total_expired_stock }} expired
+                        </span>
+                        {% else %}
+                        <span class="text-muted small">None</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% with nb=med.nearest_expiry_batch %}
+                        {% if nb %}
+                            <span class="badge {{ nb.expiry_badge.class }}" style="font-size: 0.72rem;">
+                                {{ nb.expiry_date|date:"M d, Y" }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted small">No batches</span>
+                        {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td class="text-end">
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'medicine_detail' pk=med.pk %}" class="btn btn-outline-primary" title="View details & batches">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'batch_create' %}?medicine={{ med.pk }}" class="btn btn-outline-success" title="Add batch stock">
+                                <i class="bi bi-plus-lg"></i>
+                            </a>
+                            {% if med.total_available_stock > 0 %}
+                            <a href="{% url 'stock_dispense' pk=med.pk %}" class="btn btn-outline-info text-dark" title="Dispense stock">
+                                <i class="bi bi-bag-check"></i>
+                            </a>
+                            {% endif %}
+                            {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
+                            <a href="{% url 'medicine_update' pk=med.pk %}" class="btn btn-outline-secondary" title="Edit medicine">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'medicine_delete' pk=med.pk %}" class="btn btn-outline-danger" title="Delete medicine">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center py-5 text-muted">
+                        <i class="bi bi-capsule display-5 d-block mb-3 text-secondary"></i>
+                        <h5>No medicines found matching criteria</h5>
+                        <p class="small text-muted">Try adjusting your filters or search keywords.</p>
+                        {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
+                        <a href="{% url 'medicine_create' %}" class="btn btn-primary mt-2">
+                            <i class="bi bi-plus-circle me-1"></i> Add New Medicine
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center">
+        <span class="text-muted small">Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ total_count }} medicines</span>
+        <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ query }}&category={{ selected_category }}&supplier={{ selected_supplier }}&stock_status={{ stock_filter }}&sort={{ sort_by }}">&laquo;</a></li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}&q={{ query }}&category={{ selected_category }}&supplier={{ selected_supplier }}&stock_status={{ stock_filter }}&sort={{ sort_by }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ query }}&category={{ selected_category }}&supplier={{ selected_supplier }}&stock_status={{ stock_filter }}&sort={{ sort_by }}">&raquo;</a></li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

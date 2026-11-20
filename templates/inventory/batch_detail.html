@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+
+{% block title %}Batch: {{ batch.batch_number }} - {{ batch.medicine.name }}{% endblock %}
+
+{% block content %}
+<!-- Batch Header -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{% url 'batch_list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+            <h4 class="fw-bold mb-0 text-dark">Batch #{{ batch.batch_number }}</h4>
+            <span class="badge {{ batch.expiry_badge.class }} fs-6">
+                <i class="bi {{ batch.expiry_badge.icon }} me-1"></i>{{ batch.expiry_status_label }}
+            </span>
+        </div>
+        <p class="text-muted small mb-0 ms-4">
+            Medicine: <a href="{% url 'medicine_detail' pk=batch.medicine.pk %}" class="fw-semibold text-primary text-decoration-none">{{ batch.medicine.name }}</a>
+            ({{ batch.medicine.generic_name }}) &bull; SKU: {{ batch.medicine.medicine_id }}
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        {% if not batch.is_expired and batch.available_quantity > 0 %}
+        <a href="{% url 'stock_dispense' pk=batch.medicine.pk %}" class="btn btn-primary">
+            <i class="bi bi-bag-check me-1"></i> Dispense from Batch
+        </a>
+        {% endif %}
+        {% if batch.is_expired and batch.available_quantity > 0 %}
+        <a href="{% url 'batch_dispose' pk=batch.pk %}" class="btn btn-danger">
+            <i class="bi bi-trash me-1"></i> Dispose Expired Units ({{ batch.available_quantity }})
+        </a>
+        {% endif %}
+        {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
+        <a href="{% url 'batch_update' pk=batch.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-pencil me-1"></i> Edit Batch
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Metrics Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <span class="stat-label">Available Units</span>
+            <div class="stat-value text-primary">{{ batch.available_quantity }}</div>
+            <div class="stat-subtext">Original purchase: {{ batch.purchase_quantity }} units</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <span class="stat-label">Expiry Date</span>
+            <div class="stat-value text-dark">{{ batch.expiry_date|date:"M d, Y" }}</div>
+            <div class="stat-subtext">
+                {% if batch.days_to_expiry < 0 %}
+                <span class="text-danger fw-bold">Expired {{ batch.days_to_expiry|stringformat:"d"|slice:"1:" }} days ago</span>
+                {% else %}
+                <span class="text-success fw-bold">{{ batch.days_to_expiry }} days remaining</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <span class="stat-label">Unit Cost Price</span>
+            <div class="stat-value text-dark">${{ batch.purchase_price }}</div>
+            <div class="stat-subtext">Total batch value: ${{ batch.purchase_price|floatformat:2 }} &times; {{ batch.available_quantity }}</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <span class="stat-label">Stock Status</span>
+            <div class="stat-value" style="font-size: 1.35rem;">
+                {% if batch.is_expired %}
+                <span class="text-danger"><i class="bi bi-x-octagon"></i> Expired</span>
+                {% elif batch.available_quantity == 0 %}
+                <span class="text-secondary"><i class="bi bi-slash-circle"></i> Depleted</span>
+                {% else %}
+                <span class="text-success"><i class="bi bi-check-circle"></i> Active Stock</span>
+                {% endif %}
+            </div>
+            <div class="stat-subtext">Stock entry: {{ batch.entry_date|date:"M d, Y" }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Batch Lifecycle & Supplier Info -->
+    <div class="col-lg-5">
+        <div class="pharmacy-card p-4 h-100">
+            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                <i class="bi bi-calendar2-check text-primary me-2"></i>Batch Lifecycle & Provenance
+            </h6>
+            <div class="mb-3">
+                <span class="text-muted small d-block">Manufacturing Date:</span>
+                <span class="fw-semibold text-dark">{{ batch.manufacturing_date|date:"F d, Y" }}</span>
+            </div>
+            <div class="mb-3">
+                <span class="text-muted small d-block">Expiry Date:</span>
+                <span class="fw-semibold text-dark">{{ batch.expiry_date|date:"F d, Y" }}</span>
+            </div>
+            <div class="mb-3">
+                <span class="text-muted small d-block">Entry / Receipt Date:</span>
+                <span class="fw-semibold text-dark">{{ batch.entry_date|date:"F d, Y" }}</span>
+            </div>
+            <div class="mb-3">
+                <span class="text-muted small d-block">Delivered By Supplier:</span>
+                <a href="{% url 'supplier_detail' pk=batch.supplier.pk %}" class="fw-semibold text-primary text-decoration-none">
+                    <i class="bi bi-truck me-1"></i>{{ batch.supplier.company_name }}
+                </a>
+                <div class="text-muted small mt-1">Contact: {{ batch.supplier.name }} ({{ batch.supplier.contact_number }})</div>
+            </div>
+            {% if batch.notes %}
+            <div class="mb-3">
+                <span class="text-muted small d-block">Storage / Delivery Notes:</span>
+                <div class="text-secondary small bg-light p-2 rounded">{{ batch.notes }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Automated Expiry Notifications Log for this Batch -->
+    <div class="col-lg-7">
+        <div class="pharmacy-card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-bell text-primary me-2"></i>Automated Expiry Notifications ({{ notifications.count }})</h6>
+                <a href="{% url 'notification_list' %}" class="small text-decoration-none">All Alerts</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Alert Level</th>
+                            <th>Recipient</th>
+                            <th>Dispatched At</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for n in notifications %}
+                        <tr>
+                            <td><span class="badge {{ n.badge_class }}">{{ n.get_alert_category_display }}</span></td>
+                            <td class="small">{{ n.recipient_email }}</td>
+                            <td class="small text-muted">{{ n.sent_at|date:"M d, Y H:i" }}</td>
+                            <td>
+                                {% if n.status == 'SENT' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">Sent</span>
+                                {% else %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ n.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                No expiry alert notifications have been generated for this batch yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stock Transaction History for this Batch -->
+<div class="pharmacy-card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history text-primary me-2"></i>Batch Movement Audit Trail</h6>
+        <span class="text-muted small">{{ transactions.count }} activities</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Activity</th>
+                    <th>Units</th>
+                    <th>Unit Price</th>
+                    <th>Performed By</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transactions %}
+                <tr>
+                    <td class="small text-muted">{{ t.timestamp|date:"M d, Y H:i" }}</td>
+                    <td>
+                        <span class="badge bg-light text-dark border">{{ t.get_transaction_type_display }}</span>
+                    </td>
+                    <td class="fw-bold">{{ t.quantity }} units</td>
+                    <td>{% if t.unit_price %}${{ t.unit_price }}{% else %}-{% endif %}</td>
+                    <td class="small">{{ t.performed_by.username|default:"System" }}</td>
+                    <td class="small text-secondary">{{ t.reference_note|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-3 text-muted">No movement history for this batch.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
